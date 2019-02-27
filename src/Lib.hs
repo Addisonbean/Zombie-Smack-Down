@@ -2,7 +2,10 @@ module Lib
   ( gameLoop
   ) where
 
-import EventLoop (eventLoop, GameState(..))
+import EventLoop (eventLoop, initialGame)
+import System.Random
+import Control.Monad.Trans.State
+
 
 gameLoop :: IO ()
-gameLoop = eventLoop GameState
+gameLoop = getStdGen >>= runStateT eventLoop . initialGame >> return ()

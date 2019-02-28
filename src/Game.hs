@@ -14,6 +14,7 @@ import Control.Monad.State
 import Control.Monad.Trans.State (StateT)
 import System.Random
 
+import Command
 import Zombie
 
 type GameState = StateT Game IO
@@ -48,12 +49,18 @@ initialGame g = Game
 startGame :: Game -> Game
 startGame = set gameStatus Playing
 
-execCmd :: String -> GameState ()
-execCmd "hi" = liftIO $ putStrLn "Hey!"
-execCmd "exit" = modify (set gameStatus Exited)
-execCmd "punch" = modify (over currentZombie punchZombie)
-execCmd "status" = get >>= liftIO . putStrLn . show . view currentZombie
-execCmd _ = return ()
+-- execCmd :: String -> GameState ()
+-- execCmd "hi" = liftIO $ putStrLn "Hey!"
+-- execCmd "exit" = modify (set gameStatus Exited)
+-- execCmd "punch" = modify (over currentZombie punchZombie)
+-- execCmd "status" = get >>= liftIO . putStrLn . show . view currentZombie
+-- execCmd _ = return ()
+
+execCmd :: Command -> GameState ()
+execCmd Punch = modify (over currentZombie punchZombie)
+execCmd Exit = modify (set gameStatus Exited)
+execCmd Status = liftIO . putStrLn . show . view currentZombie =<< get
+execCmd EmptyCommand = return ()
 
 status :: Game -> GameStatus
 status = view gameStatus

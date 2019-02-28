@@ -24,6 +24,7 @@ dependencies:
 - random
 - mtl
 - transformers
+- lens
 
 library:
   source-dirs: src

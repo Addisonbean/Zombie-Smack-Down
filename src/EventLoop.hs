@@ -1,12 +1,14 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module EventLoop
   ( eventLoop
   , initialGame
   ) where
 
-import Data.Maybe (fromMaybe)
 import System.Random
 import Control.Monad.State
 import Control.Monad.Trans.State (StateT)
+import Control.Lens
 import Utility (strEq)
 
 data Command = Command
@@ -21,10 +23,14 @@ parseInput = parseParts . words
     parseParts (x:xs) = Command { name = x, arguments = xs }
 
 data Zombie = Zombie
-  { zombieType :: String
-  , health :: Int
-  , power :: (Int, Int)
+  { _zombieType :: String
+  , _health :: Int
+  , _power :: (Int, Int)
   } deriving (Show)
+makeLenses ''Zombie
+
+punchZombie :: Zombie -> Zombie
+punchZombie = over health $ subtract 1
 
 data ZombieType = ZombieType
   { typeName :: String
@@ -49,7 +55,7 @@ toughZombieType = ZombieType
 makeZombie :: ZombieType -> State StdGen Zombie
 makeZombie t = do
   h <- state (randomR (healthRange t))
-  return Zombie { zombieType = typeName t, health = h, power = powerRange t }
+  return Zombie { _zombieType = typeName t, _health = h, _power = powerRange t }
 
 makeWaves :: [ZombieType] -> State StdGen [[Zombie]]
 makeWaves [] = return []
@@ -63,31 +69,44 @@ makeWaves (t:ts) = do
 type GameState = StateT Game IO
 
 data GameStatus
-  = Started
+  = Start
+  | Playing
   | Exited
   | GameOver
   deriving (Show, Eq)
 
 data Game = Game
-  { waves :: [[Zombie]]
-  , playerHealth :: Int
-  , randomGen :: StdGen
-  , gameStatus :: GameStatus
+  { _waves :: [[Zombie]]
+  , _currentZombie :: Zombie
+  , _playerHealth :: Int
+  , _randomGen :: StdGen
+  , _gameStatus :: GameStatus
   } deriving (Show)
+makeLenses ''Game
 
 initialGame:: StdGen -> Game
-initialGame g = Game { waves = evalState (makeWaves waves') g, playerHealth = 20, randomGen = g, gameStatus = Started }
-  where waves' = [basicZombieType, toughZombieType]
+initialGame g = Game
+  { _waves = waves''
+  , _currentZombie = z
+  , _playerHealth = 20
+  , _randomGen = g1
+  , _gameStatus = Start
+  } where
+      types = [basicZombieType, toughZombieType]
+      ((z:w1):waves', g1) = runState (makeWaves types) g
+      waves'' = w1:waves'
 
-execCmd :: String -> StateT Game IO ()
+execCmd :: String -> GameState ()
 execCmd "hi" = liftIO $ putStrLn "Hey!"
-execCmd "exit" = state $ \g -> ((), g { gameStatus = Exited })
+execCmd "exit" = modify (set gameStatus Exited)
+execCmd "punch" = modify (over currentZombie punchZombie)
+execCmd "status" = get >>= liftIO . putStrLn . show . view currentZombie
 execCmd _ = return ()
 
 eventLoop :: GameState ()
 eventLoop = do
-  execCmd =<< liftIO getLine
   g <- get
-  if gameStatus g == Exited
-     then return ()
-     else eventLoop
+  case _gameStatus g of
+    Start -> liftIO (putStrLn "Welcome to Zombie Smackdown!") >> modify (set gameStatus Playing) >> eventLoop
+    Exited -> return ()
+    _ -> liftIO getLine >>= execCmd >> eventLoop

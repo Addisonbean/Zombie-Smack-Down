@@ -6,10 +6,14 @@ module EventLoop
 import Control.Lens
 import Control.Monad.State
 import Control.Monad.Trans.State (StateT)
+import System.IO
 import System.Random
 
 import Game
 import Command
+
+prompt :: String -> IO String
+prompt s = putStr s >> hFlush stdout >> getLine
 
 eventLoop :: GameState ()
 eventLoop = do
@@ -17,4 +21,4 @@ eventLoop = do
   case status g of
     Start -> liftIO (putStrLn "Welcome to Zombie Smackdown!") >> modify startGame >> eventLoop
     Exited -> return ()
-    _ -> liftIO getLine >>= maybe (liftIO $ putStrLn "invalid input") execCmd . parseInput >> eventLoop
+    _ -> liftIO (prompt "> ") >>= maybe (liftIO $ putStrLn "invalid input") execCmd . parseInput >> eventLoop

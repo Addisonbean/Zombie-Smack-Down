@@ -9,4 +9,4 @@ import EventLoop
 import Game
 
 gameLoop :: IO ()
-gameLoop = getStdGen >>= runStateT eventLoop . initialGame >> return ()
+gameLoop = getStdGen >>= evalStateT eventLoop . initialGame >>= return

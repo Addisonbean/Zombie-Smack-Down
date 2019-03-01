@@ -49,17 +49,21 @@ initialGame g = Game
 startGame :: Game -> Game
 startGame = set gameStatus Playing
 
--- execCmd :: String -> GameState ()
--- execCmd "hi" = liftIO $ putStrLn "Hey!"
--- execCmd "exit" = modify (set gameStatus Exited)
--- execCmd "punch" = modify (over currentZombie punchZombie)
--- execCmd "status" = get >>= liftIO . putStrLn . show . view currentZombie
--- execCmd _ = return ()
+printStatus :: Game -> IO ()
+printStatus g = do
+  putStrLn $ "Health: " ++ show (g ^. playerHealth)
+  putStrLn $ "Zombie health: " ++ show (g ^. currentZombie . health)
 
 execCmd :: Command -> GameState ()
-execCmd Punch = modify (over currentZombie punchZombie)
+execCmd Punch = do
+  oldHealth <- (fmap (view (currentZombie . health)) get)
+  modify $ over currentZombie punchZombie
+  newHealth <- (fmap (view (currentZombie . health)) get)
+  liftIO . putStrLn $ zombieStatus (oldHealth - newHealth)
+    where
+      zombieStatus dmg = "The zombie took " ++ show dmg ++ " damage!"
 execCmd Exit = modify (set gameStatus Exited)
-execCmd Status = liftIO . putStrLn . show . view currentZombie =<< get
+execCmd Status = liftIO . printStatus =<< get
 execCmd EmptyCommand = return ()
 
 status :: Game -> GameStatus

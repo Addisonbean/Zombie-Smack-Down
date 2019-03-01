@@ -5,6 +5,9 @@ module Zombie
   , ZombieType(..)
   , punchZombie
   , genWaves
+  , zombieType
+  , health
+  , power
   ) where
 
 import Control.Lens

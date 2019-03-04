@@ -66,8 +66,8 @@ nextZombie (w:ws) = Just (z, zs:ws)
 ko :: GameState ()
 ko = do
   liftIO $ putStrLn "KO!"
-  g <- get
-  case nextZombie (g ^. waves) of
+  ws <- gets $ view waves
+  case nextZombie ws of
     Just (newZombie, newWaves) -> do
       modify $ set currentZombie newZombie
       modify $ set waves newWaves
@@ -86,8 +86,9 @@ execCmd :: Command -> GameState ()
 execCmd Punch = do
   dmg <- attackZombie (1, 2)
   liftIO $ putStrLn (zombieStatus dmg)
-  g <- get
-  when (not . isZombieAlive $ g ^. currentZombie) ko
+
+  z <- gets $ view currentZombie
+  when (not $ isZombieAlive z) ko
     where
       zombieStatus dmg = "The zombie took " ++ show dmg ++ " damage!"
 execCmd Exit = modify (set gameStatus Exited)

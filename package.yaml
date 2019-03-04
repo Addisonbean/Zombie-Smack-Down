@@ -25,6 +25,7 @@ dependencies:
 - mtl
 - transformers
 - lens
+- MonadRandom
 
 library:
   source-dirs: src

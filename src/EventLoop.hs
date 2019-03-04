@@ -1,5 +1,5 @@
 module EventLoop
-  ( eventLoop
+  ( start
   , initialGame
   ) where
 
@@ -15,10 +15,14 @@ import Command
 prompt :: String -> IO String
 prompt s = putStr s >> hFlush stdout >> getLine
 
+start :: GameState ()
+start = eventLoop
+
 eventLoop :: GameState ()
 eventLoop = do
-  g <- get
-  case status g of
-    Start -> liftIO (putStrLn "Welcome to Zombie Smackdown!") >> modify startGame >> eventLoop
+  s <- gets status
+  case s of
+    Start -> liftIO (putStrLn "Welcome to Zombie Smackdown!") >> initGame >> eventLoop
     Exited -> return ()
+    Win -> liftIO $ putStrLn "Congrats!"
     _ -> liftIO (prompt "> ") >>= maybe (liftIO $ putStrLn "invalid input") execCmd . parseInput >> eventLoop

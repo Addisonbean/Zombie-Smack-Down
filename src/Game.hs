@@ -3,7 +3,7 @@
 module Game
   ( GameState
   , initialGame
-  , startGame
+  , initGame
   , GameStatus(..)
   , status
   , execCmd
@@ -12,12 +12,14 @@ module Game
 import Control.Lens
 import Control.Monad.State
 import Control.Monad.Trans.State (StateT)
+import Control.Monad.Trans.Random
+import Control.Monad.Random
 import System.Random
 
 import Command
 import Zombie
 
-type GameState = StateT Game IO
+type GameState = StateT Game (RandT StdGen IO)
 
 data GameStatus
   = Start
@@ -28,57 +30,56 @@ data GameStatus
   deriving (Show, Eq)
 
 data Game = Game
-  { _waves :: [[Zombie]]
+  { _waves :: [(ZombieType, Int)]
   , _currentZombie :: Zombie
   , _playerHealth :: Int
-  , _randomGen :: StdGen
   , _gameStatus :: GameStatus
   } deriving (Show)
 makeLenses ''Game
 
-initialGame:: StdGen -> Game
-initialGame g = Game
-  { _waves = waves''
-  , _currentZombie = z
+initialGame :: Game
+initialGame = Game
+  { _waves = waveTypes
+  , _currentZombie = blankZombie
   , _playerHealth = 20
-  , _randomGen = g1
   , _gameStatus = Start
-  } where
-      ((z:w1):waves', g1) = runState genWaves g
-      waves'' = w1:waves'
+  }
 
-startGame :: Game -> Game
-startGame = set gameStatus Playing
+nextWave :: GameState ()
+nextWave = do
+  modify $ over waves tail
+  done <- fmap null $ gets (view waves)
+  if done
+     then modify (set gameStatus Win)
+     else nextZombie
+
+nextZombie :: GameState ()
+nextZombie = do
+  (zombieType, remaining) <- fmap head $ gets (view waves)
+  if remaining == 0
+     then nextWave
+     else do
+       z <- lift $ makeZombie zombieType
+       modify $ set currentZombie z
+       modify $ over (waves . _head . _2) (subtract 1)
+
+initGame :: GameState ()
+initGame = modify (set gameStatus Playing) >> nextZombie
 
 printStatus :: Game -> IO ()
 printStatus g = do
   putStrLn $ "Health: " ++ show (g ^. playerHealth)
   putStrLn $ "Zombie health: " ++ show (g ^. currentZombie . health)
 
--- use State? (StateT [[Zombie]] (Maybe Zombie))?
-nextZombie :: [[Zombie]] -> Maybe (Zombie, [[Zombie]])
-nextZombie [] = Nothing
-nextZombie ([]:ws) = nextZombie ws
-nextZombie (w:ws) = Just (z, zs:ws)
-  where
-    ([z], zs) = splitAt 1 w
-
 ko :: GameState ()
 ko = do
   liftIO $ putStrLn "KO!"
   ws <- gets $ view waves
-  case nextZombie ws of
-    Just (newZombie, newWaves) -> do
-      modify $ set currentZombie newZombie
-      modify $ set waves newWaves
-    Nothing -> modify $ set gameStatus Win
+  nextZombie
 
--- TODO: use RandT in the StateT
 attackZombie :: (Int, Int) -> GameState Int
 attackZombie range = do
-  g <- gets $ view randomGen
-  let (dmg, g1) = randomR range g
-  modify (set randomGen g1)
+  dmg <- getRandomR range
   modify $ over currentZombie (damageZombie dmg)
   return dmg
 

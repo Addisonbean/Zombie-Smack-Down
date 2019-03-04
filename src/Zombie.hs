@@ -3,8 +3,10 @@
 module Zombie
   ( Zombie
   , ZombieType(..)
+  , blankZombie
   , damageZombie
-  , genWaves
+  , makeZombie
+  , waveTypes
   , zombieType
   , health
   , power
@@ -13,6 +15,8 @@ module Zombie
 
 import Control.Lens
 import Control.Monad.State
+import Control.Monad.Trans.Random
+import Control.Monad.Random
 import System.Random
 
 data Zombie = Zombie
@@ -21,6 +25,13 @@ data Zombie = Zombie
   , _power :: (Int, Int)
   } deriving (Show)
 makeLenses ''Zombie
+
+blankZombie :: Zombie
+blankZombie = Zombie
+  { _zombieType = ""
+  , _health = 0
+  , _power = (0, 0)
+  }
 
 damageZombie :: Int -> Zombie -> Zombie
 damageZombie = over health . subtract
@@ -45,25 +56,13 @@ toughZombieType = ZombieType
   , powerRange = (4, 6)
   }
 
-makeZombie :: ZombieType -> State StdGen Zombie
+makeZombie :: (Monad m) => ZombieType -> RandT StdGen m Zombie
 makeZombie t = do
-  h <- state (randomR (healthRange t))
+  h <- getRandomR (healthRange t)
   return Zombie { _zombieType = typeName t, _health = h, _power = powerRange t }
 
 isZombieAlive :: Zombie -> Bool
 isZombieAlive = (> 0) . view health
 
-waveTypes :: [ZombieType]
-waveTypes = [basicZombieType, toughZombieType]
-
--- fold? StateT? ListT?
-genWaves :: State StdGen [[Zombie]]
-genWaves = genWaves' waveTypes
-  where
-    genWaves' [] = return []
-    genWaves' (t:ts) = do
-      z1 <- makeZombie t
-      z2 <- makeZombie t
-      z3 <- makeZombie t
-      zs <- genWaves' ts
-      return ([z1, z2, z3]:zs)
+waveTypes :: [(ZombieType, Int)]
+waveTypes = zip [basicZombieType, toughZombieType] $ repeat 3

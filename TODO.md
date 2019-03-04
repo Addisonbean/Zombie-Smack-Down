@@ -1,5 +1,8 @@
 # TODO:
 
+ - Refactoring
+   - Use RandT and StateT's gets
+   - Clean up nextZombie?
  - Have zombies attack you back
  - Add more attacks
  - Make attacks use random damage values

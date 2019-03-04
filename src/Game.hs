@@ -24,6 +24,7 @@ data GameStatus
   | Playing
   | Exited
   | GameOver
+  | Win
   deriving (Show, Eq)
 
 data Game = Game
@@ -54,12 +55,39 @@ printStatus g = do
   putStrLn $ "Health: " ++ show (g ^. playerHealth)
   putStrLn $ "Zombie health: " ++ show (g ^. currentZombie . health)
 
+-- use State? (StateT [[Zombie]] (Maybe Zombie))?
+nextZombie :: [[Zombie]] -> Maybe (Zombie, [[Zombie]])
+nextZombie [] = Nothing
+nextZombie ([]:ws) = nextZombie ws
+nextZombie (w:ws) = Just (z, zs:ws)
+  where
+    ([z], zs) = splitAt 1 w
+
+ko :: GameState ()
+ko = do
+  liftIO $ putStrLn "KO!"
+  g <- get
+  case nextZombie (g ^. waves) of
+    Just (newZombie, newWaves) -> do
+      modify $ set currentZombie newZombie
+      modify $ set waves newWaves
+    Nothing -> modify $ set gameStatus Win
+
+-- TODO: use RandT in the StateT
+attackZombie :: (Int, Int) -> GameState Int
+attackZombie range = do
+  g <- gets $ view randomGen
+  let (dmg, g1) = randomR range g
+  modify (set randomGen g1)
+  modify $ over currentZombie (damageZombie dmg)
+  return dmg
+
 execCmd :: Command -> GameState ()
 execCmd Punch = do
-  oldHealth <- (fmap (view (currentZombie . health)) get)
-  modify $ over currentZombie punchZombie
-  newHealth <- (fmap (view (currentZombie . health)) get)
-  liftIO . putStrLn $ zombieStatus (oldHealth - newHealth)
+  dmg <- attackZombie (1, 2)
+  liftIO $ putStrLn (zombieStatus dmg)
+  g <- get
+  when (not . isZombieAlive $ g ^. currentZombie) ko
     where
       zombieStatus dmg = "The zombie took " ++ show dmg ++ " damage!"
 execCmd Exit = modify (set gameStatus Exited)

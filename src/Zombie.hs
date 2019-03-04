@@ -3,11 +3,12 @@
 module Zombie
   ( Zombie
   , ZombieType(..)
-  , punchZombie
+  , damageZombie
   , genWaves
   , zombieType
   , health
   , power
+  , isZombieAlive
   ) where
 
 import Control.Lens
@@ -21,8 +22,8 @@ data Zombie = Zombie
   } deriving (Show)
 makeLenses ''Zombie
 
-punchZombie :: Zombie -> Zombie
-punchZombie = over health $ subtract 1
+damageZombie :: Int -> Zombie -> Zombie
+damageZombie = over health . subtract
 
 data ZombieType = ZombieType
   { typeName :: String
@@ -48,6 +49,9 @@ makeZombie :: ZombieType -> State StdGen Zombie
 makeZombie t = do
   h <- state (randomR (healthRange t))
   return Zombie { _zombieType = typeName t, _health = h, _power = powerRange t }
+
+isZombieAlive :: Zombie -> Bool
+isZombieAlive = (> 0) . view health
 
 waveTypes :: [ZombieType]
 waveTypes = [basicZombieType, toughZombieType]

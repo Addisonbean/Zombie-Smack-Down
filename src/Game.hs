@@ -69,6 +69,7 @@ initGame = modify (set gameStatus Playing) >> nextZombie
 printStatus :: Game -> IO ()
 printStatus g = do
   putStrLn $ "Health: " ++ show (g ^. playerHealth)
+  putStrLn $ "Zombie: " ++ g ^. currentZombie . zombieType
   putStrLn $ "Zombie health: " ++ show (g ^. currentZombie . health)
 
 ko :: GameState ()
@@ -83,15 +84,27 @@ attackZombie range = do
   modify $ over currentZombie (damageZombie dmg)
   return dmg
 
-execCmd :: Command -> GameState ()
-execCmd Punch = do
+attackPlayer :: GameState Int
+attackPlayer = do
+  z <- gets $ view currentZombie
+  dmg <- lift $ zombieDoAttack z
+  modify $ over playerHealth (subtract dmg)
+  return dmg
+
+combat :: GameState ()
+combat = do
   dmg <- attackZombie (1, 2)
-  liftIO $ putStrLn (zombieStatus dmg)
+  liftIO $ putStrLn ("The zombie took " ++ show dmg ++ " damage!")
 
   z <- gets $ view currentZombie
-  when (not $ isZombieAlive z) ko
-    where
-      zombieStatus dmg = "The zombie took " ++ show dmg ++ " damage!"
+  if not $ isZombieAlive z
+     then ko
+     else do
+       hurt <- attackPlayer
+       liftIO $ putStrLn ("You took " ++ show hurt ++ " damage!")
+
+execCmd :: Command -> GameState ()
+execCmd Punch = combat
 execCmd Exit = modify (set gameStatus Exited)
 execCmd Status = liftIO . printStatus =<< get
 execCmd EmptyCommand = return ()

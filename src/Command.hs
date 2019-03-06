@@ -5,6 +5,7 @@ module Command
 
 data Command
   = Punch
+  | Kick
   | Status
   | Exit
   | EmptyCommand
@@ -14,6 +15,9 @@ parseInput = parseInput' . words
   where
     parseInput' ["punch"] = Just Punch
     parseInput' ["p"] = Just Punch
+
+    parseInput' ["kick"] = Just Kick
+    parseInput' ["k"] = Just Kick
 
     parseInput' ["exit"] = Just Exit
     parseInput' ["quit"] = Just Exit

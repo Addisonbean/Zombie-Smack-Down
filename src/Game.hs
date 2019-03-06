@@ -56,6 +56,14 @@ initialGame = Game
   , _gameStatus = Start
   }
 
+type Attack = (Int, Int)
+
+punch :: Attack
+punch = (4, 5)
+
+kick :: Attack
+kick = (3, 6)
+
 nextWave :: GameState ()
 nextWave = do
   modify $ over waves tail
@@ -102,9 +110,9 @@ attackPlayer = do
   modify $ over playerHealth (subtract dmg)
   return dmg
 
-combat :: GameState ()
-combat = do
-  dmg <- attackZombie (1, 2)
+combat :: Attack -> GameState ()
+combat attack = do
+  dmg <- attackZombie attack
   liftIO $ putStrLn ("The zombie took " ++ show dmg ++ " damage!")
 
   z <- gets $ view currentZombie
@@ -115,7 +123,8 @@ combat = do
        liftIO $ putStrLn ("You took " ++ show hurt ++ " damage!")
 
 execCmd :: Command -> GameState ()
-execCmd Punch = combat
+execCmd Punch = combat punch
+execCmd Kick = combat kick
 execCmd Exit = modify (set gameStatus Exited)
 execCmd Status = liftIO . printStatus =<< get
 execCmd EmptyCommand = return ()

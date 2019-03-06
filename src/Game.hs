@@ -9,15 +9,26 @@ module Game
   , execCmd
   ) where
 
-import Control.Lens
-import Control.Monad.State
+import Control.Lens (over, set, view, (^.), makeLenses, _2, _head)
+import Control.Monad.Random (getRandomR, lift)
+import Control.Monad.State (get, gets, liftIO, modify)
 import Control.Monad.Trans.State (StateT)
-import Control.Monad.Trans.Random
-import Control.Monad.Random
-import System.Random
+import Control.Monad.Trans.Random (RandT)
+import System.Random (StdGen)
 
-import Command
+import Command (Command(..))
 import Zombie
+  ( ZombieType
+  , blankZombie
+  , Zombie
+  , isZombieAlive
+  , zombieDoAttack
+  , zombieType
+  , makeZombie
+  , damageZombie
+  , waveTypes
+  , health
+  )
 
 type GameState = StateT Game (RandT StdGen IO)
 

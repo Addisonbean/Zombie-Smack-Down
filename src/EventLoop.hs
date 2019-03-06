@@ -1,16 +1,12 @@
 module EventLoop
   ( start
-  , initialGame
   ) where
 
-import Control.Lens
-import Control.Monad.State
-import Control.Monad.Trans.State (StateT)
-import System.IO
-import System.Random
+import Control.Monad.State (gets, liftIO)
+import System.IO (hFlush, stdout)
 
-import Game
-import Command
+import Command (parseInput)
+import Game (initGame, status, execCmd, GameState, GameStatus(..))
 
 prompt :: String -> IO String
 prompt s = putStr s >> hFlush stdout >> getLine

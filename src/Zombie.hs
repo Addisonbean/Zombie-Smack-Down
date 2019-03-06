@@ -14,11 +14,10 @@ module Zombie
   , zombieDoAttack
   ) where
 
-import Control.Lens
-import Control.Monad.State
-import Control.Monad.Trans.Random
-import Control.Monad.Random
-import System.Random
+import Control.Lens (over, view, makeLenses)
+import Control.Monad.Trans.Random (RandT)
+import Control.Monad.Random (getRandomR)
+import System.Random (StdGen)
 
 data Zombie = Zombie
   { _zombieType :: String

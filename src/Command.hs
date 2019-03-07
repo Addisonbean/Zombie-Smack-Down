@@ -3,10 +3,13 @@ module Command
   , Command(..)
   ) where
 
+import Text.Read (readMaybe)
+
 data Command
   = Punch
   | Kick
   | Status
+  | Heal Int
   | Exit
   | EmptyCommand
 
@@ -18,6 +21,8 @@ parseInput = parseInput' . words
 
     parseInput' ["kick"] = Just Kick
     parseInput' ["k"] = Just Kick
+
+    parseInput' ["heal", x] = Just . Heal =<< readMaybe x
 
     parseInput' ["exit"] = Just Exit
     parseInput' ["quit"] = Just Exit

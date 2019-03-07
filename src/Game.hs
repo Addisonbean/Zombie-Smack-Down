@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Game
   ( GameState
@@ -9,9 +10,10 @@ module Game
   , execCmd
   ) where
 
+import Control.Arrow (second)
 import Control.Lens (over, set, view, (^.), makeLenses, _2, _head)
 import Control.Monad.Random (getRandomR, lift)
-import Control.Monad.State (get, gets, liftIO, modify, when)
+import Control.Monad.State (get, gets, liftIO, modify, when, state)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Random (RandT)
 import System.Random (StdGen)
@@ -135,15 +137,31 @@ combat attack = do
      else do
        hurt <- attackPlayer
        liftIO $ putStrLn ("You took " ++ show hurt ++ " damage!")
+
        alive <- gets playerAlive
        when (not alive) gameOver
 
 gameOver :: GameState ()
 gameOver = modify $ set gameStatus GameOver
 
+heal :: Int -> Game -> (Bool, Game)
+heal x g
+  | view xp g < x = (False, g)
+  | otherwise = (True, update g)
+    where
+      update = over xp (subtract x) . over playerHealth (+x)
+
+doHeal :: Int -> GameState ()
+doHeal x = do
+  success <- state $ heal x
+  if success
+     then liftIO $ putStrLn ("+" ++ show x ++ " health!")
+     else liftIO $ putStrLn "Not enough xp"
+
 execCmd :: Command -> GameState ()
 execCmd Punch = combat punch
 execCmd Kick = combat kick
+execCmd (Heal x) = doHeal x
 execCmd Exit = modify (set gameStatus Exited)
 execCmd Status = liftIO . printStatus =<< get
 execCmd EmptyCommand = return ()

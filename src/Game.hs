@@ -28,6 +28,7 @@ import Zombie
   , damageZombie
   , waveTypes
   , health
+  , xpGiven
   )
 
 type GameState = StateT Game (RandT StdGen IO)
@@ -45,6 +46,7 @@ data Game = Game
   , _currentZombie :: Zombie
   , _playerHealth :: Int
   , _gameStatus :: GameStatus
+  , _xp :: Int
   } deriving (Show)
 makeLenses ''Game
 
@@ -54,6 +56,7 @@ initialGame = Game
   , _currentZombie = blankZombie
   , _playerHealth = 20
   , _gameStatus = Start
+  , _xp = 5
   }
 
 type Attack = (Int, Int)
@@ -88,13 +91,21 @@ initGame = modify (set gameStatus Playing) >> nextZombie
 printStatus :: Game -> IO ()
 printStatus g = do
   putStrLn $ "Health: " ++ show (g ^. playerHealth)
-  putStrLn $ "Zombie: " ++ g ^. currentZombie . zombieType
+  putStrLn $ "Xp: " ++ show (g ^. xp)
+  putStrLn $ "Zombie: " ++ (g ^. currentZombie . zombieType)
   putStrLn $ "Zombie health: " ++ show (g ^. currentZombie . health)
+
+giveXp :: Int -> Game -> Game
+giveXp = over xp . (+)
 
 ko :: GameState ()
 ko = do
   liftIO $ putStrLn "KO!"
-  ws <- gets $ view waves
+
+  xp <- gets $ view (currentZombie . xpGiven)
+  modify $ giveXp xp
+  liftIO $ putStrLn ("+" ++ show xp ++ " xp!")
+
   nextZombie
 
 attackZombie :: (Int, Int) -> GameState Int

@@ -12,6 +12,7 @@ module Zombie
   , power
   , isZombieAlive
   , zombieDoAttack
+  , xpGiven
   ) where
 
 import Control.Lens (over, view, makeLenses)
@@ -23,6 +24,7 @@ data Zombie = Zombie
   { _zombieType :: String
   , _health :: Int
   , _power :: (Int, Int)
+  , _xpGiven :: Int
   } deriving (Show)
 makeLenses ''Zombie
 
@@ -37,6 +39,7 @@ data ZombieType = ZombieType
   { typeName :: String
   , healthRange :: (Int, Int)
   , powerRange :: (Int, Int)
+  , xpEarned :: Int
   } deriving (Show)
 
 basicZombieType :: ZombieType
@@ -44,6 +47,7 @@ basicZombieType = ZombieType
   { typeName = "basic"
   , healthRange = (5, 8)
   , powerRange = (3, 4)
+  , xpEarned = 3
   }
 
 toughZombieType :: ZombieType
@@ -51,12 +55,13 @@ toughZombieType = ZombieType
   { typeName = "tough"
   , healthRange = (7, 10)
   , powerRange = (4, 6)
+  , xpEarned = 5
   }
 
 makeZombie :: (Monad m) => ZombieType -> RandT StdGen m Zombie
 makeZombie t = do
   h <- getRandomR (healthRange t)
-  return Zombie { _zombieType = typeName t, _health = h, _power = powerRange t }
+  return Zombie { _zombieType = typeName t, _health = h, _power = powerRange t, _xpGiven = xpEarned t }
 
 waveTypes :: [(ZombieType, Int)]
 waveTypes = zip [basicZombieType, toughZombieType] $ repeat 3

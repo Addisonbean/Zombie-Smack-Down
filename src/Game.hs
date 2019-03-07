@@ -11,7 +11,7 @@ module Game
 
 import Control.Lens (over, set, view, (^.), makeLenses, _2, _head)
 import Control.Monad.Random (getRandomR, lift)
-import Control.Monad.State (get, gets, liftIO, modify)
+import Control.Monad.State (get, gets, liftIO, modify, when)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Random (RandT)
 import System.Random (StdGen)
@@ -121,6 +121,9 @@ attackPlayer = do
   modify $ over playerHealth (subtract dmg)
   return dmg
 
+playerAlive :: Game -> Bool
+playerAlive = (> 0) . view playerHealth
+
 combat :: Attack -> GameState ()
 combat attack = do
   dmg <- attackZombie attack
@@ -132,6 +135,11 @@ combat attack = do
      else do
        hurt <- attackPlayer
        liftIO $ putStrLn ("You took " ++ show hurt ++ " damage!")
+       alive <- gets playerAlive
+       when (not alive) gameOver
+
+gameOver :: GameState ()
+gameOver = modify $ set gameStatus GameOver
 
 execCmd :: Command -> GameState ()
 execCmd Punch = combat punch

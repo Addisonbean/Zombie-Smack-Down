@@ -21,4 +21,5 @@ eventLoop = do
     Start -> liftIO (putStrLn "Welcome to Zombie Smackdown!") >> initGame >> eventLoop
     Exited -> return ()
     Win -> liftIO $ putStrLn "Congrats!"
+    GameOver -> liftIO $ putStrLn "Game over..."
     _ -> liftIO (prompt "> ") >>= maybe (liftIO $ putStrLn "invalid input") execCmd . parseInput >> eventLoop

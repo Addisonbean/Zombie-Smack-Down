@@ -1,6 +1,8 @@
 # TODO:
 
  - Add more attacks
+ - Add a way to list unlocked combos
+ - Notify them when a combo is unlocked
  - Refactoring
    - Sometimes use qualified imports to do stuff like Z.health and G.health
    - Name stuff better (more descriptive and consistent)

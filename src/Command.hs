@@ -5,11 +5,14 @@ module Command
 
 import Text.Read (readMaybe)
 
+import Combo (Combo, kickKickPunch)
+
 data Command
   = Punch
   | Kick
   | Status
   | Heal Int
+  | ComboAttack Combo
   | Exit
   | EmptyCommand
 
@@ -29,6 +32,12 @@ parseInput = parseInput' . words
 
     parseInput' ["status"] = Just Status
     parseInput' ["s"] = Just Status
+
+    -- COMBOS
+
+    parseInput' ["kick", "kick", "punch"] = Just $ ComboAttack kickKickPunch
+
+    -- END COMBOS
 
     parseInput' [] = Just EmptyCommand
 

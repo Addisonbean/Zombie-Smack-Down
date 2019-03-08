@@ -18,6 +18,7 @@ import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Random (RandT)
 import System.Random (StdGen)
 
+import Combo (Combo, comboCost, comboDamageRange, isAvaliable)
 import Command (Command(..))
 import Zombie
   ( ZombieType
@@ -49,6 +50,7 @@ data Game = Game
   , _playerHealth :: Int
   , _gameStatus :: GameStatus
   , _xp :: Int
+  , _currentWave :: Int
   } deriving (Show)
 makeLenses ''Game
 
@@ -59,6 +61,7 @@ initialGame = Game
   , _playerHealth = 20
   , _gameStatus = Start
   , _xp = 5
+  , _currentWave = 0
   }
 
 type Attack = (Int, Int)
@@ -72,10 +75,11 @@ kick = (3, 6)
 nextWave :: GameState ()
 nextWave = do
   modify $ over waves tail
+  modify $ over currentWave (+1)
   done <- fmap null $ gets (view waves)
   if done
      then modify (set gameStatus Win)
-     else nextZombie
+     else liftIO (putStrLn "Next Wave!") >> nextZombie
 
 nextZombie :: GameState ()
 nextZombie = do
@@ -99,6 +103,9 @@ printStatus g = do
 
 giveXp :: Int -> Game -> Game
 giveXp = over xp . (+)
+
+takeXp :: Int -> Game -> Game
+takeXp = over xp . subtract
 
 ko :: GameState ()
 ko = do
@@ -158,10 +165,26 @@ doHeal x = do
      then liftIO $ putStrLn ("+" ++ show x ++ " health!")
      else liftIO $ putStrLn "Not enough xp"
 
+doCombo :: Combo -> GameState ()
+doCombo c = do
+  currWave <- gets $ view currentWave
+  if isAvaliable c currWave
+     then do
+      xp' <- gets $ view xp
+      let cost = comboCost c
+      if xp' >= cost
+         then do
+           modify $ takeXp cost
+           liftIO $ putStrLn ("-" ++ show cost ++ " xp")
+           combat $ comboDamageRange c
+          else liftIO $ putStrLn "Not enough xp..."
+    else liftIO $ putStrLn "Combo not unlocked"
+
 execCmd :: Command -> GameState ()
 execCmd Punch = combat punch
 execCmd Kick = combat kick
 execCmd (Heal x) = doHeal x
+execCmd (ComboAttack c) = doCombo c
 execCmd Exit = modify (set gameStatus Exited)
 execCmd Status = liftIO . printStatus =<< get
 execCmd EmptyCommand = return ()
